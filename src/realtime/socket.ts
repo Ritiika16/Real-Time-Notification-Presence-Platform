@@ -5,13 +5,21 @@ import { Env } from '../infrastructure/config/env';
 import { PresenceManager } from './presence.manager';
 import { socketAuthMiddleware } from './middlewares/socket.auth.middleware';
 import { setupPresenceHandlers } from './handlers/presence.handler';
+import { setupNotificationHandlers } from './handlers/notification.handler';
+import { NotificationService } from '../application/services/notification.service';
 
 let io: SocketIOServer | null = null;
 let presenceManager: PresenceManager | null = null;
+let notificationService: NotificationService | null = null;
 
-export const initializeSocketIO = (httpServer: HTTPServer, env: Env): SocketIOServer => {
+export const initializeSocketIO = (
+  httpServer: HTTPServer,
+  env: Env,
+  notificationServiceInstance: NotificationService
+): SocketIOServer => {
   const logger = createLogger(env);
   presenceManager = new PresenceManager(logger);
+  notificationService = notificationServiceInstance;
 
   io = new SocketIOServer(httpServer, {
     cors: {
@@ -23,6 +31,7 @@ export const initializeSocketIO = (httpServer: HTTPServer, env: Env): SocketIOSe
   io.use(socketAuthMiddleware(logger));
 
   void setupPresenceHandlers(io, presenceManager, logger);
+  void setupNotificationHandlers(io, notificationService, logger);
 
   logger.info('Socket.IO initialized successfully');
 
@@ -41,4 +50,11 @@ export const getPresenceManager = (): PresenceManager => {
     throw new Error('Presence manager not initialized');
   }
   return presenceManager;
+};
+
+export const getNotificationService = (): NotificationService => {
+  if (!notificationService) {
+    throw new Error('Notification service not initialized');
+  }
+  return notificationService;
 };

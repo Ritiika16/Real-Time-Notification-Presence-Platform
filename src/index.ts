@@ -4,18 +4,24 @@ import { validateEnv } from './infrastructure/config/env';
 import { createLogger } from './infrastructure/logger/logger';
 import { prisma } from './infrastructure/database/prisma';
 import { initializeSocketIO } from './realtime/socket';
+import { NotificationService } from './application/services/notification.service';
+import { NotificationRepository } from './infrastructure/repositories/notification.repository';
 
 dotenv.config();
 
 const env = validateEnv();
 const logger = createLogger(env);
-const app = createApp(env);
+
+const notificationRepository = new NotificationRepository();
+const notificationService = new NotificationService(notificationRepository, logger);
+
+const app = createApp(env, notificationService);
 
 const server = app.listen(env.PORT, () => {
   logger.info(`Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
 
-initializeSocketIO(server, env);
+initializeSocketIO(server, env, notificationService);
 
 const gracefulShutdown = (signal: string): void => {
   logger.info(`${signal} received. Starting graceful shutdown...`);

@@ -21,5 +21,23 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const createNotificationSchema = z.object({
+  receiverId: z.string().uuid('Invalid receiver ID'),
+  title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
+  message: z
+    .string()
+    .min(1, 'Message is required')
+    .max(2000, 'Message must not exceed 2000 characters'),
+  type: z.enum(['INFO', 'MESSAGE', 'ALERT', 'SYSTEM'], {
+    errorMap: () => ({ message: 'Invalid notification type' }),
+  }),
+});
+
+export const markAsReadSchema = z.object({
+  notificationId: z.string().uuid('Invalid notification ID'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type CreateNotificationInput = z.infer<typeof createNotificationSchema>;
+export type MarkAsReadInput = z.infer<typeof markAsReadSchema>;

@@ -15,53 +15,51 @@ datasource db {
 
 enum NotificationType {
   INFO
-  SUCCESS
-  WARNING
-  ERROR
+  MESSAGE
+  ALERT
+  SYSTEM
+}
+
+enum NotificationStatus {
+  PENDING
+  DELIVERED
+  READ
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
+  id           String         @id @default(uuid())
+  email        String         @unique
   passwordHash String
   fullName     String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
-  notifications   Notification[]
-  socketSessions  SocketSession[]
+  sentNotifications     Notification[] @relation("SentNotifications")
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
+  socketSessions        SocketSession[]
 
   @@index([email])
 }
 
 model Notification {
-  id        String             @id @default(uuid())
-  userId    String
-  title     String
-  body      String
-  type      NotificationType
-  createdAt DateTime           @default(now())
+  id          String            @id @default(uuid())
+  senderId    String
+  receiverId  String
+  title       String
+  message     String
+  type        NotificationType
+  status      NotificationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
 
-  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  statuses NotificationStatus[]
+  sender   User @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedNotifications", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
   @@index([createdAt])
-}
-
-model NotificationStatus {
-  id            String       @id @default(uuid())
-  notificationId String
-  delivered     Boolean      @default(false)
-  read          Boolean      @default(false)
-  deliveredAt   DateTime?
-  readAt        DateTime?
-
-  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-
-  @@index([notificationId])
-  @@index([delivered])
-  @@index([read])
 }
 
 model SocketSession {
