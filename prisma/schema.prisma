@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  notifications   Notification[]
+  socketSessions  SocketSession[]
+
+  @@index([email])
+}
+
+model Notification {
+  id        String             @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  type      NotificationType
+  createdAt DateTime           @default(now())
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statuses NotificationStatus[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model NotificationStatus {
+  id            String       @id @default(uuid())
+  notificationId String
+  delivered     Boolean      @default(false)
+  read          Boolean      @default(false)
+  deliveredAt   DateTime?
+  readAt        DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([delivered])
+  @@index([read])
+}
+
+model SocketSession {
+  id            String    @id @default(uuid())
+  userId        String
+  socketId      String    @unique
+  connectedAt   DateTime  @default(now())
+  disconnectedAt DateTime?
+  isOnline      Boolean   @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([socketId])
+  @@index([isOnline])
+}

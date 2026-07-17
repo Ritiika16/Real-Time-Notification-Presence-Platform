@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { createApp } from './app';
 import { validateEnv } from './infrastructure/config/env';
 import { createLogger } from './infrastructure/logger/logger';
+import { prisma } from './infrastructure/database/prisma';
 
 dotenv.config();
 
@@ -16,8 +17,10 @@ const server = app.listen(env.PORT, () => {
 const gracefulShutdown = (signal: string): void => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
 
-  server.close(() => {
+  server.close(async () => {
     logger.info('HTTP server closed');
+    await prisma.$disconnect();
+    logger.info('Prisma client disconnected');
     process.exit(0);
   });
 
