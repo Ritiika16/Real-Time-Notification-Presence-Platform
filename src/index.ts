@@ -17,11 +17,13 @@ const server = app.listen(env.PORT, () => {
 const gracefulShutdown = (signal: string): void => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
 
-  server.close(async () => {
-    logger.info('HTTP server closed');
-    await prisma.$disconnect();
-    logger.info('Prisma client disconnected');
-    process.exit(0);
+  server.close(() => {
+    void (async () => {
+      logger.info('HTTP server closed');
+      await prisma.$disconnect();
+      logger.info('Prisma client disconnected');
+      process.exit(0);
+    })();
   });
 
   const timeout = setTimeout(() => {

@@ -5,6 +5,10 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { createLogger } from './infrastructure/logger/logger';
 import { Env } from './infrastructure/config/env';
+import { AuthService } from './application/services/auth.service';
+import { createAuthRoutes } from './api/routes/auth.routes';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './infrastructure/config/swagger';
 
 const createApp = (env: Env): Express => {
   const logger = createLogger(env);
@@ -31,6 +35,13 @@ const createApp = (env: Env): Express => {
       },
     })
   );
+
+  const authService = new AuthService(logger);
+  const authRoutes = createAuthRoutes(authService, logger);
+
+  app.use('/api/v1/auth', authRoutes);
+
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({
