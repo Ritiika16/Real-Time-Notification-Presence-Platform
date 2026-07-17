@@ -7,6 +7,7 @@ import { createLogger } from './infrastructure/logger/logger';
 import { Env } from './infrastructure/config/env';
 import { AuthService } from './application/services/auth.service';
 import { createAuthRoutes } from './api/routes/auth.routes';
+import { createUsersRoutes } from './api/routes/users.routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './infrastructure/config/swagger';
 
@@ -38,8 +39,10 @@ const createApp = (env: Env): Express => {
 
   const authService = new AuthService(logger);
   const authRoutes = createAuthRoutes(authService, logger);
+  const usersRoutes = createUsersRoutes();
 
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/users', usersRoutes);
 
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

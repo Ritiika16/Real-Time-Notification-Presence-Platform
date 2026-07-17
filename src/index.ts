@@ -3,6 +3,7 @@ import { createApp } from './app';
 import { validateEnv } from './infrastructure/config/env';
 import { createLogger } from './infrastructure/logger/logger';
 import { prisma } from './infrastructure/database/prisma';
+import { initializeSocketIO } from './realtime/socket';
 
 dotenv.config();
 
@@ -13,6 +14,8 @@ const app = createApp(env);
 const server = app.listen(env.PORT, () => {
   logger.info(`Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
+
+initializeSocketIO(server, env);
 
 const gracefulShutdown = (signal: string): void => {
   logger.info(`${signal} received. Starting graceful shutdown...`);

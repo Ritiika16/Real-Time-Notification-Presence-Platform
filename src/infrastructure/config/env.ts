@@ -43,13 +43,9 @@ export const validateEnv = (): Env => {
     return envSchema.parse(env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(
-        (err) => `${err.path.join('.')}: ${err.message}`
-      );
+      const errorMessages = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`);
 
-      throw new Error(
-        `Environment validation failed:\n${errorMessages.join('\n')}`
-      );
+      throw new Error(`Environment validation failed:\n${errorMessages.join('\n')}`);
     }
 
     throw error;
