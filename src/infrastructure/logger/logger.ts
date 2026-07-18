@@ -1,9 +1,15 @@
 import winston from 'winston';
 import { Env } from '../config/env';
 
-const createLogger = (env: Env): winston.Logger => {
+const createLogger = (env: Env, instancePort?: number): winston.Logger => {
+  const instanceLabel = instancePort ? `Server-${instancePort}` : 'Server';
+
   const logFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format((info) => {
+      info['instance'] = instanceLabel;
+      return info;
+    })(),
     winston.format.errors({ stack: true }),
     winston.format.splat(),
     winston.format.json()
@@ -14,7 +20,7 @@ const createLogger = (env: Env): winston.Logger => {
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.printf(
       ({ timestamp, level, message, ...metadata }: winston.Logform.TransformableInfo) => {
-        const msg = `${String(timestamp)} [${String(level)}]: ${String(message)}`;
+        const msg = `${String(timestamp)} [${instanceLabel}] [${String(level)}]: ${String(message)}`;
         if (Object.keys(metadata).length > 0) {
           return `${msg} ${JSON.stringify(metadata)}`;
         }

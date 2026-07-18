@@ -10,7 +10,7 @@ import { NotificationRepository } from './infrastructure/repositories/notificati
 dotenv.config();
 
 const env = validateEnv();
-const logger = createLogger(env);
+const logger = createLogger(env, env.PORT);
 
 const notificationRepository = new NotificationRepository();
 const notificationService = new NotificationService(notificationRepository, logger);
