@@ -1,6 +1,6 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { createLogger } from '../infrastructure/logger/logger';
+import { Logger } from 'winston';
 import { Env } from '../infrastructure/config/env';
 import { PresenceManager } from './presence.manager';
 import { socketAuthMiddleware } from './middlewares/socket.auth.middleware';
@@ -15,9 +15,9 @@ let notificationService: NotificationService | null = null;
 export const initializeSocketIO = (
   httpServer: HTTPServer,
   env: Env,
-  notificationServiceInstance: NotificationService
+  notificationServiceInstance: NotificationService,
+  logger: Logger
 ): SocketIOServer => {
-  const logger = createLogger(env);
   presenceManager = new PresenceManager(logger);
   notificationService = notificationServiceInstance;
 

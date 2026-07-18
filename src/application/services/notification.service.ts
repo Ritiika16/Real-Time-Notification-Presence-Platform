@@ -1,4 +1,5 @@
 import { NotificationRepository } from '../../infrastructure/repositories/notification.repository';
+import { RedisPubSub, RedisPubSubMessage } from '../../infrastructure/redis/redis.pubsub';
 import { getPresenceManager } from '../../realtime/socket';
 import { getSocketIO } from '../../realtime/socket';
 import {
@@ -13,35 +14,36 @@ import { prisma } from '../../infrastructure/database/prisma';
 export class NotificationService {
   constructor(
     private readonly notificationRepository: NotificationRepository,
+    private readonly redisPubSub: RedisPubSub,
+    private readonly instanceId: string,
     private readonly logger: Logger
   ) {}
 
   async createNotification(input: CreateNotificationInput): Promise<NotificationResponse> {
     const notification = await this.notificationRepository.create(input);
 
+    const sender = await prisma.user.findUnique({
+      where: { id: input.senderId },
+      select: { email: true, fullName: true },
+    });
+
     const presenceManager = getPresenceManager();
     const isReceiverOnline = presenceManager.isUserOnline(input.receiverId);
+
+    const payload: NotificationPayload = {
+      id: notification.id,
+      senderId: input.senderId,
+      senderEmail: sender?.email || '',
+      senderName: sender?.fullName || '',
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+      createdAt: notification.createdAt,
+    };
 
     if (isReceiverOnline) {
       const io = getSocketIO();
       const receiverSockets = presenceManager.getUserSockets(input.receiverId);
-
-      const sender = await prisma.user.findUnique({
-        where: { id: input.senderId },
-        select: { email: true, fullName: true },
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload: NotificationPayload = {
-        id: notification.id,
-        senderId: input.senderId,
-        senderEmail: sender?.email || '',
-        senderName: sender?.fullName || '',
-        title: notification.title,
-        message: notification.message,
-        type: notification.type,
-        createdAt: notification.createdAt,
-      };
 
       receiverSockets.forEach((socketId) => {
         io.to(socketId).emit('notification:new', payload);
@@ -55,9 +57,23 @@ export class NotificationService {
         socketCount: receiverSockets.length,
       });
     } else {
-      this.logger.info('Notification stored for offline user', {
+      await this.redisPubSub.publish({
+        sourceInstanceId: this.instanceId,
         notificationId: notification.id,
         receiverId: input.receiverId,
+        senderId: input.senderId,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        createdAt: notification.createdAt.toISOString(),
+        senderName: sender?.fullName || '',
+        senderEmail: sender?.email || '',
+      });
+
+      this.logger.info('Notification published to Redis for cross-instance delivery', {
+        notificationId: notification.id,
+        receiverId: input.receiverId,
+        sourceInstanceId: this.instanceId,
       });
     }
 
@@ -142,5 +158,46 @@ export class NotificationService {
         socketId,
       });
     }
+  }
+
+  async handleRedisNotification(message: RedisPubSubMessage): Promise<void> {
+    const presenceManager = getPresenceManager();
+    const isReceiverOnline = presenceManager.isUserOnline(message.receiverId);
+
+    if (!isReceiverOnline) {
+      this.logger.info('Redis event ignored - receiver not connected locally', {
+        notificationId: message.notificationId,
+        receiverId: message.receiverId,
+        instanceId: this.instanceId,
+      });
+      return;
+    }
+
+    const io = getSocketIO();
+    const receiverSockets = presenceManager.getUserSockets(message.receiverId);
+
+    const payload = {
+      id: message.notificationId,
+      senderId: message.senderId,
+      senderEmail: message.senderEmail,
+      senderName: message.senderName,
+      title: message.title,
+      message: message.message,
+      type: message.type,
+      createdAt: new Date(message.createdAt),
+    } as NotificationPayload;
+
+    receiverSockets.forEach((socketId) => {
+      io.to(socketId).emit('notification:new', payload);
+    });
+
+    await this.notificationRepository.markDelivered(message.notificationId);
+
+    this.logger.info('Notification delivered through Redis', {
+      notificationId: message.notificationId,
+      receiverId: message.receiverId,
+      socketCount: receiverSockets.length,
+      instanceId: this.instanceId,
+    });
   }
 }
