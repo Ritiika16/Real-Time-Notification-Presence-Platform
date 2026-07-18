@@ -158,7 +158,7 @@ export const createNotificationRoutes = (
     void notificationController.getUnreadCount(req as AuthenticatedRequest, res, next);
   });
 
-  router.patch('/:id/read', authenticate(authService, logger), (req, res, next) => {
+  router.patch('/:notificationId/read', authenticate(authService, logger), (req, res, next) => {
     void notificationController.markAsRead(req as AuthenticatedRequest, res, next);
   });
 

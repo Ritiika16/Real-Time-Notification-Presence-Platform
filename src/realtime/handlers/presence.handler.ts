@@ -2,11 +2,13 @@ import { Server as SocketIOServer } from 'socket.io';
 import { AuthenticatedSocket } from '../middlewares/socket.auth.middleware';
 import { PresenceManager } from '../presence.manager';
 import { Logger } from 'winston';
+import { NotificationService } from '../../application/services/notification.service';
 
 export const setupPresenceHandlers = (
   io: SocketIOServer,
   presenceManager: PresenceManager,
-  logger: Logger
+  logger: Logger,
+  notificationService: NotificationService
 ): void => {
   io.on('connection', (socket: AuthenticatedSocket) => {
     if (!socket.user) {
@@ -34,6 +36,8 @@ export const setupPresenceHandlers = (
       email,
       socketId: socket.id,
     });
+
+    void notificationService.syncNotificationsForUser(userId, socket.id);
 
     socket.on('disconnect', () => {
       const user = presenceManager.removeUser(socket.id);

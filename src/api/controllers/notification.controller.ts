@@ -34,10 +34,10 @@ export class NotificationController {
 
       const notification = await this.notificationService.createNotification({
         senderId,
-        receiverId: validationResult.data.receiverId as string,
-        title: validationResult.data.title as string,
-        message: validationResult.data.message as string,
-        type: validationResult.data.type as any,
+        receiverId: validationResult.data.receiverId,
+        title: validationResult.data.title,
+        message: validationResult.data.message,
+        type: validationResult.data.type,
       });
 
       res.status(201).json({

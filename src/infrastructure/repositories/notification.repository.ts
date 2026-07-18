@@ -78,6 +78,49 @@ export class NotificationRepository {
     });
   }
 
+  async findUnreadByReceiver(receiverId: string): Promise<NotificationWithSender[]> {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        receiverId,
+        status: {
+          in: ['PENDING', 'DELIVERED'],
+        },
+      },
+      include: {
+        sender: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return notifications.map((notification) => this.mapToWithSender(notification));
+  }
+
+  async findPendingNotifications(receiverId: string): Promise<NotificationWithSender[]> {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        receiverId,
+        status: 'PENDING',
+      },
+      include: {
+        sender: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return notifications.map((notification) => this.mapToWithSender(notification));
+  }
+
+  async findByIdWithSender(id: string): Promise<NotificationWithSender | null> {
+    const notification = await prisma.notification.findUnique({
+      where: { id },
+      include: {
+        sender: true,
+      },
+    });
+
+    return notification ? this.mapToWithSender(notification) : null;
+  }
+
   private mapToResponse(notification: any): NotificationResponse {
     return {
       id: notification.id,

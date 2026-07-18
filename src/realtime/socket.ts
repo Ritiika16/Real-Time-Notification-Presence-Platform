@@ -30,7 +30,7 @@ export const initializeSocketIO = (
 
   io.use(socketAuthMiddleware(logger));
 
-  void setupPresenceHandlers(io, presenceManager, logger);
+  void setupPresenceHandlers(io, presenceManager, logger, notificationService);
   void setupNotificationHandlers(io, notificationService, logger);
 
   logger.info('Socket.IO initialized successfully');
