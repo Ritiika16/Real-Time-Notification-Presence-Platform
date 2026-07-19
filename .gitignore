@@ -4,8 +4,12 @@ coverage
 logs
 *.log
 .env
+.env.docker
+.env.local
+.env.*.local
 .DS_Store
 *.swp
 *.swo
 .vscode
 .idea
+*.tsbuildinfo
