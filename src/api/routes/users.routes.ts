@@ -21,22 +21,12 @@ import { UsersController } from '../controllers/users.controller';
  *                 users:
  *                   type: array
  *                   items:
- *                     type: object
- *                     properties:
- *                       userId:
- *                         type: string
- *                         format: uuid
- *                       email:
- *                         type: string
- *                         format: email
- *                       connectedAt:
- *                         type: string
- *                         format: date-time
+ *                     $ref: '#/components/schemas/OnlineUser'
  */
 
-export const createUsersRoutes = (): Router => {
+export const createUsersRoutes = (logger: import('winston').Logger): Router => {
   const router = Router();
-  const usersController = new UsersController();
+  const usersController = new UsersController(logger);
 
   router.get('/online', (req, res, next) => {
     void usersController.getOnlineUsers(req, res, next);

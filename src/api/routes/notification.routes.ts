@@ -48,7 +48,7 @@ import { Logger } from 'winston';
  *                 success:
  *                   type: boolean
  *                 notification:
- *                   type: object
+ *                   $ref: '#/components/schemas/Notification'
  *       400:
  *         description: Validation error
  *       401:
@@ -59,10 +59,23 @@ import { Logger } from 'winston';
  * @swagger
  * /api/v1/notifications:
  *   get:
- *     summary: Get current user's notifications
+ *     summary: Get current user's notifications with pagination
  *     tags: [Notifications]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of items per page
  *     responses:
  *       200:
  *         description: Notifications retrieved successfully
@@ -73,10 +86,15 @@ import { Logger } from 'winston';
  *               properties:
  *                 success:
  *                   type: boolean
- *                 notifications:
- *                   type: array
- *                   items:
- *                     type: object
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/NotificationWithSender'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Unauthorized
  */
@@ -99,15 +117,18 @@ import { Logger } from 'winston';
  *               properties:
  *                 success:
  *                   type: boolean
- *                 count:
- *                   type: integer
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
  *       401:
  *         description: Unauthorized
  */
 
 /**
  * @swagger
- * /api/v1/notifications/{id}/read:
+ * /api/v1/notifications/{notificationId}/read:
  *   patch:
  *     summary: Mark notification as read
  *     tags: [Notifications]
@@ -115,7 +136,7 @@ import { Logger } from 'winston';
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: notificationId
  *         required: true
  *         schema:
  *           type: string
@@ -131,9 +152,40 @@ import { Logger } from 'winston';
  *                 success:
  *                   type: boolean
  *                 notification:
- *                   type: object
+ *                   $ref: '#/components/schemas/Notification'
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Unauthorized access to notification
+ *       404:
+ *         description: Notification not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/notifications/read-all:
+ *   patch:
+ *     summary: Mark all notifications as read
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications marked as read
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     updatedCount:
+ *                       type: integer
  *       401:
  *         description: Unauthorized
  */
@@ -144,7 +196,7 @@ export const createNotificationRoutes = (
   logger: Logger
 ): Router => {
   const router = Router();
-  const notificationController = new NotificationController(notificationService);
+  const notificationController = new NotificationController(notificationService, logger);
 
   router.post('/', authenticate(authService, logger), (req, res, next) => {
     void notificationController.createNotification(req as AuthenticatedRequest, res, next);

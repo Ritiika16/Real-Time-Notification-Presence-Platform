@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { AuthenticatedSocket } from '../middlewares/socket.auth.middleware';
 import { TypingService } from '../../application/services/typing.service';
+import { MetricsService } from '../../application/services/metrics.service';
 import { getPresenceManager } from '../socket';
 import { Logger } from 'winston';
 import { TypingStartPayload, TypingStopPayload } from '../../shared/types/typing.types';
@@ -8,7 +9,8 @@ import { TypingStartPayload, TypingStopPayload } from '../../shared/types/typing
 export const setupTypingHandlers = (
   io: SocketIOServer,
   typingService: TypingService,
-  logger: Logger
+  logger: Logger,
+  _metricsService: MetricsService
 ): void => {
   io.on('connection', (socket: AuthenticatedSocket) => {
     if (!socket.user) {

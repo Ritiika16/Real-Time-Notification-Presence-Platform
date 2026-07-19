@@ -7,9 +7,13 @@ import { createLogger } from './infrastructure/logger/logger';
 import { Env } from './infrastructure/config/env';
 import { AuthService } from './application/services/auth.service';
 import { NotificationService } from './application/services/notification.service';
+import { HealthService } from './application/services/health.service';
+import { MetricsService } from './application/services/metrics.service';
 import { createAuthRoutes } from './api/routes/auth.routes';
 import { createUsersRoutes } from './api/routes/users.routes';
 import { createNotificationRoutes } from './api/routes/notification.routes';
+import { createHealthRoutes } from './api/routes/health.routes';
+import { createMetricsRoutes } from './api/routes/metrics.routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './infrastructure/config/swagger';
 import {
@@ -20,6 +24,9 @@ import {
 const createApp = (env: Env, notificationService: NotificationService): Express => {
   const logger = createLogger(env);
   const app = express();
+
+  const healthService = new HealthService(logger);
+  const metricsService = MetricsService.getInstance();
 
   app.use(helmet());
 
@@ -43,14 +50,31 @@ const createApp = (env: Env, notificationService: NotificationService): Express 
     })
   );
 
+  // Metrics middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+
+    res.on('finish', () => {
+      const duration = (Date.now() - start) / 1000;
+      const route = req.route ? req.route.path : req.path;
+      metricsService.recordHttpRequest(req.method, route, res.statusCode, duration);
+    });
+
+    next();
+  });
+
   const authService = new AuthService(logger);
   const authRoutes = createAuthRoutes(authService, logger);
-  const usersRoutes = createUsersRoutes();
+  const usersRoutes = createUsersRoutes(logger);
   const notificationRoutes = createNotificationRoutes(notificationService, authService, logger);
+  const healthRoutes = createHealthRoutes(healthService);
+  const metricsRoutes = createMetricsRoutes(metricsService);
 
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/users', usersRoutes);
   app.use('/api/v1/notifications', notificationRoutes);
+  app.use('/health', healthRoutes);
+  app.use('/metrics', metricsRoutes);
 
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

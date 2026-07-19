@@ -6,7 +6,7 @@ const options = {
     info: {
       title: 'Distributed Real-Time Notification & Presence Platform API',
       version: '1.0.0',
-      description: 'Production-grade authentication and notification system',
+      description: 'Production-grade authentication and notification system with real-time Socket.IO support',
     },
     servers: [
       {
@@ -121,6 +121,158 @@ const options = {
                   format: 'date-time',
                 },
               },
+            },
+          },
+        },
+        Notification: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            senderId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            receiverId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            title: {
+              type: 'string',
+            },
+            message: {
+              type: 'string',
+            },
+            type: {
+              type: 'string',
+              enum: ['INFO', 'MESSAGE', 'ALERT', 'SYSTEM'],
+            },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'DELIVERED', 'READ'],
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            deliveredAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+            },
+            readAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+            },
+          },
+        },
+        NotificationWithSender: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            senderId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            receiverId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            title: {
+              type: 'string',
+            },
+            message: {
+              type: 'string',
+            },
+            type: {
+              type: 'string',
+              enum: ['INFO', 'MESSAGE', 'ALERT', 'SYSTEM'],
+            },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'DELIVERED', 'READ'],
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            deliveredAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+            },
+            readAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+            },
+            sender: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'string',
+                  format: 'uuid',
+                },
+                email: {
+                  type: 'string',
+                  format: 'email',
+                },
+                fullName: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+        PaginationMeta: {
+          type: 'object',
+          properties: {
+            page: {
+              type: 'integer',
+              example: 1,
+            },
+            limit: {
+              type: 'integer',
+              example: 20,
+            },
+            total: {
+              type: 'integer',
+              example: 100,
+            },
+            totalPages: {
+              type: 'integer',
+              example: 5,
+            },
+            hasNextPage: {
+              type: 'boolean',
+              example: true,
+            },
+            hasPreviousPage: {
+              type: 'boolean',
+              example: false,
+            },
+          },
+        },
+        OnlineUser: {
+          type: 'object',
+          properties: {
+            userId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+            },
+            connectedAt: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },

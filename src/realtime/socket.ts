@@ -9,40 +9,41 @@ import { setupNotificationHandlers } from './handlers/notification.handler';
 import { setupTypingHandlers } from './handlers/typing.handler';
 import { NotificationService } from '../application/services/notification.service';
 import { TypingService } from '../application/services/typing.service';
+import { MetricsService } from '../application/services/metrics.service';
 
 let io: SocketIOServer | null = null;
 let presenceManager: PresenceManager | null = null;
 let notificationService: NotificationService | null = null;
 let typingService: TypingService | null = null;
+let metricsService: MetricsService | null = null;
 
 export const initializeSocketIO = (
   httpServer: HTTPServer,
   env: Env,
   notificationServiceInstance: NotificationService,
   typingServiceInstance: TypingService,
+  metricsServiceInstance: MetricsService,
   logger: Logger
 ): SocketIOServer => {
   presenceManager = new PresenceManager(logger);
   notificationService = notificationServiceInstance;
   typingService = typingServiceInstance;
+  metricsService = metricsServiceInstance;
 
   io = new SocketIOServer(httpServer, {
     cors: {
       origin: env.NODE_ENV === 'production' ? process.env['ALLOWED_ORIGINS']?.split(',') : '*',
       credentials: true,
     },
-    reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 10000,
+    pingTimeout: 10000,
+    pingInterval: 5000,
   });
 
   io.use(socketAuthMiddleware(logger));
 
-  void setupPresenceHandlers(io, presenceManager, logger, notificationService);
-  void setupNotificationHandlers(io, notificationService, logger);
-  void setupTypingHandlers(io, typingService, logger);
+  void setupPresenceHandlers(io, presenceManager, logger, notificationService, metricsService);
+  void setupNotificationHandlers(io, notificationService, logger, metricsService);
+  void setupTypingHandlers(io, typingService, logger, metricsService);
 
   logger.info('Socket.IO initialized successfully');
 
@@ -75,4 +76,11 @@ export const getTypingService = (): TypingService => {
     throw new Error('Typing service not initialized');
   }
   return typingService;
+};
+
+export const getMetricsService = (): MetricsService => {
+  if (!metricsService) {
+    throw new Error('Metrics service not initialized');
+  }
+  return metricsService;
 };

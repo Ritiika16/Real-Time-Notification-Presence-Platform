@@ -1,12 +1,14 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { AuthenticatedSocket } from '../middlewares/socket.auth.middleware';
 import { NotificationService } from '../../application/services/notification.service';
+import { MetricsService } from '../../application/services/metrics.service';
 import { Logger } from 'winston';
 
 export const setupNotificationHandlers = (
   io: SocketIOServer,
   notificationService: NotificationService,
-  logger: Logger
+  logger: Logger,
+  _metricsService: MetricsService
 ): void => {
   io.on('connection', (socket: AuthenticatedSocket) => {
     if (!socket.user) {

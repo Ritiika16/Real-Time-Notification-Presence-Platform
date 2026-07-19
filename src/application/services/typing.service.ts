@@ -1,6 +1,7 @@
 import { RedisPubSub } from '../../infrastructure/redis/redis.pubsub';
 import { getPresenceManager } from '../../realtime/socket';
 import { getSocketIO } from '../../realtime/socket';
+import { getMetricsService } from '../../realtime/socket';
 import { TypingPubSubMessage, TypingEventPayload } from '../../shared/types/typing.types';
 import { Logger } from 'winston';
 
@@ -101,6 +102,9 @@ export class TypingService {
       });
       return;
     }
+
+    const metricsService = getMetricsService();
+    metricsService.incrementRedisPubSubMessage('typing');
 
     const io = getSocketIO();
     const receiverSockets = presenceManager.getUserSockets(message.receiverId);

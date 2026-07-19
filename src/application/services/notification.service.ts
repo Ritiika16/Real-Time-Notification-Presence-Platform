@@ -2,6 +2,7 @@ import { NotificationRepository } from '../../infrastructure/repositories/notifi
 import { RedisPubSub, RedisPubSubMessage } from '../../infrastructure/redis/redis.pubsub';
 import { getPresenceManager } from '../../realtime/socket';
 import { getSocketIO } from '../../realtime/socket';
+import { getMetricsService } from '../../realtime/socket';
 import {
   CreateNotificationInput,
   NotificationResponse,
@@ -39,6 +40,9 @@ export class NotificationService {
   async createNotification(input: CreateNotificationInput): Promise<NotificationResponse> {
     const notification = await this.notificationRepository.create(input);
 
+    const metricsService = getMetricsService();
+    metricsService.incrementNotificationsCreated();
+
     const sender = await prisma.user.findUnique({
       where: { id: input.senderId },
       select: { email: true, fullName: true },
@@ -68,6 +72,8 @@ export class NotificationService {
 
       await this.notificationRepository.markDelivered(notification.id);
 
+      metricsService.incrementNotificationsDelivered();
+
       this.logger.info('Notification delivered to online user', {
         notificationId: notification.id,
         receiverId: input.receiverId,
@@ -86,6 +92,8 @@ export class NotificationService {
         senderName: sender?.fullName || '',
         senderEmail: sender?.email || '',
       });
+
+      metricsService.incrementNotificationsStoredOffline();
 
       this.logger.info('Notification published to Redis for cross-instance delivery', {
         notificationId: notification.id,
@@ -219,6 +227,9 @@ export class NotificationService {
       return;
     }
 
+    const metricsService = getMetricsService();
+    metricsService.incrementRedisPubSubMessage('notification');
+
     const io = getSocketIO();
     const receiverSockets = presenceManager.getUserSockets(message.receiverId);
 
@@ -238,6 +249,8 @@ export class NotificationService {
     });
 
     await this.notificationRepository.markDelivered(message.notificationId);
+
+    metricsService.incrementNotificationsDelivered();
 
     this.logger.info('Notification delivered through Redis', {
       notificationId: message.notificationId,
@@ -305,6 +318,9 @@ export class NotificationService {
       });
       return;
     }
+
+    const metricsService = getMetricsService();
+    metricsService.incrementRedisPubSubMessage('read-receipt');
 
     const io = getSocketIO();
     const senderSockets = presenceManager.getUserSockets(message.senderId);

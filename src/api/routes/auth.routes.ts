@@ -101,7 +101,7 @@ import { Logger } from 'winston';
 
 export const createAuthRoutes = (authService: AuthService, logger: Logger): Router => {
   const router = Router();
-  const authController = new AuthController(authService);
+  const authController = new AuthController(authService, logger);
 
   router.post('/register', (req, res, next) => {
     void authController.register(req, res, next);
