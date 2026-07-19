@@ -10,6 +10,7 @@ import {
   PaginatedNotifications,
   PaginationParams,
 } from '../../shared/types/notification.types';
+import { ReadReceiptPubSubMessage, ReadReceiptEventPayload } from '../../shared/types/read-receipt.types';
 import { Logger } from 'winston';
 import { prisma } from '../../infrastructure/database/prisma';
 
@@ -242,6 +243,86 @@ export class NotificationService {
       notificationId: message.notificationId,
       receiverId: message.receiverId,
       socketCount: receiverSockets.length,
+      instanceId: this.instanceId,
+    });
+  }
+
+  async sendReadReceipt(
+    notificationId: string,
+    readBy: string,
+    senderId: string
+  ): Promise<void> {
+    const presenceManager = getPresenceManager();
+    const isSenderOnline = presenceManager.isUserOnline(senderId);
+
+    const payload: ReadReceiptEventPayload = {
+      notificationId,
+      readBy,
+      readAt: new Date().toISOString(),
+    };
+
+    if (isSenderOnline) {
+      const io = getSocketIO();
+      const senderSockets = presenceManager.getUserSockets(senderId);
+
+      senderSockets.forEach((socketId) => {
+        io.to(socketId).emit('notification:read', payload);
+      });
+
+      this.logger.info('Read receipt sent to online sender', {
+        notificationId,
+        readBy,
+        senderId,
+        socketCount: senderSockets.length,
+      });
+    } else {
+      await this.redisPubSub.publishReadReceipt({
+        sourceInstanceId: this.instanceId,
+        notificationId,
+        readBy,
+        readAt: payload.readAt,
+        senderId,
+      });
+
+      this.logger.info('Read receipt published to Redis for cross-instance delivery', {
+        notificationId,
+        readBy,
+        senderId,
+        sourceInstanceId: this.instanceId,
+      });
+    }
+  }
+
+  async handleRedisReadReceipt(message: ReadReceiptPubSubMessage): Promise<void> {
+    const presenceManager = getPresenceManager();
+    const isSenderOnline = presenceManager.isUserOnline(message.senderId);
+
+    if (!isSenderOnline) {
+      this.logger.info('Redis read receipt event ignored - sender not connected locally', {
+        notificationId: message.notificationId,
+        senderId: message.senderId,
+        instanceId: this.instanceId,
+      });
+      return;
+    }
+
+    const io = getSocketIO();
+    const senderSockets = presenceManager.getUserSockets(message.senderId);
+
+    const payload: ReadReceiptEventPayload = {
+      notificationId: message.notificationId,
+      readBy: message.readBy,
+      readAt: message.readAt,
+    };
+
+    senderSockets.forEach((socketId) => {
+      io.to(socketId).emit('notification:read', payload);
+    });
+
+    this.logger.info('Read receipt delivered through Redis', {
+      notificationId: message.notificationId,
+      senderId: message.senderId,
+      socketCount: senderSockets.length,
       instanceId: this.instanceId,
     });
   }

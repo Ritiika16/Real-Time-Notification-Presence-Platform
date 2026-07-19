@@ -60,9 +60,16 @@ export const setupNotificationHandlers = (
             readAt: updatedNotification.readAt,
           });
 
-          logger.info('Notification marked as read via socket', {
+          await notificationService.sendReadReceipt(
+            data.notificationId,
+            userId,
+            notification.senderId
+          );
+
+          logger.info('Notification marked as read via socket and receipt sent', {
             userId,
             notificationId: data.notificationId,
+            senderId: notification.senderId,
           });
 
           callback?.({ success: true });

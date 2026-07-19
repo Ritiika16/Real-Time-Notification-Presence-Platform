@@ -5,6 +5,7 @@ import { createLogger } from './infrastructure/logger/logger';
 import { prisma } from './infrastructure/database/prisma';
 import { initializeSocketIO } from './realtime/socket';
 import { NotificationService } from './application/services/notification.service';
+import { TypingService } from './application/services/typing.service';
 import { NotificationRepository } from './infrastructure/repositories/notification.repository';
 import { createRedisClient } from './infrastructure/redis/redis.client';
 import { RedisPubSub } from './infrastructure/redis/redis.pubsub';
@@ -27,19 +28,29 @@ const notificationService = new NotificationService(
   logger
 );
 
+const typingService = new TypingService(redisPubSub, env.INSTANCE_ID, logger);
+
 const app = createApp(env, notificationService);
 
 const server = app.listen(env.PORT, () => {
   logger.info(`Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
 
-initializeSocketIO(server, env, notificationService, logger);
+initializeSocketIO(server, env, notificationService, typingService, logger);
 
 void (async () => {
   try {
     await redisPubSub.connect();
-    await redisPubSub.subscribe((message) => {
-      void notificationService.handleRedisNotification(message);
+    await redisPubSub.subscribe({
+      notification: (message) => {
+        void notificationService.handleRedisNotification(message);
+      },
+      typing: (message) => {
+        void typingService.handleRedisTyping(message);
+      },
+      readReceipt: (message) => {
+        void notificationService.handleRedisReadReceipt(message);
+      },
     });
   } catch (error) {
     logger.error('Failed to initialize Redis Pub/Sub', {
