@@ -5,6 +5,8 @@ import {
   CreateNotificationInput,
   NotificationResponse,
   NotificationWithSender,
+  PaginatedNotifications,
+  PaginationParams,
 } from '../../shared/types/notification.types';
 
 export class NotificationRepository {
@@ -43,6 +45,46 @@ export class NotificationRepository {
     return notifications.map((notification) => this.mapToWithSender(notification));
   }
 
+  async findByReceiverPaginated(
+    receiverId: string,
+    params: PaginationParams
+  ): Promise<PaginatedNotifications> {
+    const skip = (params.page - 1) * params.limit;
+
+    const [notifications, total] = await Promise.all([
+      prisma.notification.findMany({
+        where: { receiverId },
+        include: { sender: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: params.limit,
+      }),
+      prisma.notification.count({
+        where: { receiverId },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / params.limit);
+
+    return {
+      notifications: notifications.map((notification) => this.mapToWithSender(notification)),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages,
+        hasNextPage: params.page < totalPages,
+        hasPreviousPage: params.page > 1,
+      },
+    };
+  }
+
+  async countByReceiver(receiverId: string): Promise<number> {
+    return prisma.notification.count({
+      where: { receiverId },
+    });
+  }
+
   async markDelivered(id: string): Promise<NotificationResponse> {
     const notification = await prisma.notification.update({
       where: { id },
@@ -76,6 +118,23 @@ export class NotificationRepository {
         },
       },
     });
+  }
+
+  async markAllAsRead(receiverId: string): Promise<number> {
+    const result = await prisma.notification.updateMany({
+      where: {
+        receiverId,
+        status: {
+          in: ['PENDING', 'DELIVERED'],
+        },
+      },
+      data: {
+        status: 'READ',
+        readAt: new Date(),
+      },
+    });
+
+    return result.count;
   }
 
   async findUnreadByReceiver(receiverId: string): Promise<NotificationWithSender[]> {

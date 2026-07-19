@@ -40,3 +40,22 @@ export interface NotificationPayload {
   type: NotificationType;
   createdAt: Date;
 }
+
+export interface PaginationParams {
+  page: number;
+  limit: number;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PaginatedNotifications {
+  notifications: NotificationWithSender[];
+  pagination: PaginationMeta;
+}

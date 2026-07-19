@@ -7,9 +7,25 @@ import {
   NotificationResponse,
   NotificationPayload,
   NotificationWithSender,
+  PaginatedNotifications,
+  PaginationParams,
 } from '../../shared/types/notification.types';
 import { Logger } from 'winston';
 import { prisma } from '../../infrastructure/database/prisma';
+
+export class NotificationNotFoundError extends Error {
+  constructor() {
+    super('Notification not found');
+    this.name = 'NotificationNotFoundError';
+  }
+}
+
+export class NotificationOwnershipError extends Error {
+  constructor() {
+    super('You do not have permission to access this notification');
+    this.name = 'NotificationOwnershipError';
+  }
+}
 
 export class NotificationService {
   constructor(
@@ -80,18 +96,47 @@ export class NotificationService {
     return notification;
   }
 
-  async getNotifications(receiverId: string): Promise<NotificationWithSender[]> {
-    return this.notificationRepository.findByReceiver(receiverId);
+  async getNotifications(
+    receiverId: string,
+    params: PaginationParams
+  ): Promise<PaginatedNotifications> {
+    return this.notificationRepository.findByReceiverPaginated(receiverId, params);
   }
 
-  async markAsRead(notificationId: string): Promise<NotificationResponse> {
-    const notification = await this.notificationRepository.markRead(notificationId);
+  async markAsRead(userId: string, notificationId: string): Promise<NotificationResponse> {
+    const notification = await this.notificationRepository.findByIdWithSender(notificationId);
+
+    if (!notification) {
+      throw new NotificationNotFoundError();
+    }
+
+    if (notification.receiverId !== userId) {
+      throw new NotificationOwnershipError();
+    }
+
+    if (notification.status === 'READ') {
+      return notification;
+    }
+
+    const updatedNotification = await this.notificationRepository.markRead(notificationId);
 
     this.logger.info('Notification marked as read', {
       notificationId,
+      userId,
     });
 
-    return notification;
+    return updatedNotification;
+  }
+
+  async markAllAsRead(userId: string): Promise<number> {
+    const updatedCount = await this.notificationRepository.markAllAsRead(userId);
+
+    this.logger.info('All notifications marked as read', {
+      userId,
+      updatedCount,
+    });
+
+    return updatedCount;
   }
 
   async getUnreadCount(receiverId: string): Promise<number> {

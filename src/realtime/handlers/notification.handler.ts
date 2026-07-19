@@ -49,7 +49,10 @@ export const setupNotificationHandlers = (
             return;
           }
 
-          const updatedNotification = await notificationService.markAsRead(data.notificationId);
+          const updatedNotification = await notificationService.markAsRead(
+            userId,
+            data.notificationId
+          );
 
           io.to(socket.id).emit('notification:read:success', {
             notificationId: updatedNotification.id,

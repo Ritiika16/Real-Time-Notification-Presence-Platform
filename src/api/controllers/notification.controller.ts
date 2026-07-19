@@ -1,6 +1,10 @@
 import { Response, NextFunction } from 'express';
 import { NotificationService } from '../../application/services/notification.service';
-import { createNotificationSchema, markAsReadSchema } from '../../shared/utils/validation';
+import {
+  createNotificationSchema,
+  markAsReadSchema,
+  paginationSchema,
+} from '../../shared/utils/validation';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 export class NotificationController {
@@ -64,11 +68,25 @@ export class NotificationController {
         return;
       }
 
-      const notifications = await this.notificationService.getNotifications(userId);
+      const validationResult = paginationSchema.safeParse({
+        page: req.query['page'],
+        limit: req.query['limit'],
+      });
+
+      if (!validationResult.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.error.errors,
+        });
+        return;
+      }
+
+      const result = await this.notificationService.getNotifications(userId, validationResult.data);
 
       res.status(200).json({
         success: true,
-        notifications,
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -77,6 +95,15 @@ export class NotificationController {
 
   async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+        return;
+      }
+
       const { notificationId } = req.params;
 
       const validationResult = markAsReadSchema.safeParse({ notificationId });
@@ -91,12 +118,37 @@ export class NotificationController {
       }
 
       const notification = await this.notificationService.markAsRead(
+        userId,
         validationResult.data.notificationId
       );
 
       res.status(200).json({
         success: true,
         notification,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async markAllAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+        return;
+      }
+
+      const updatedCount = await this.notificationService.markAllAsRead(userId);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          updatedCount,
+        },
       });
     } catch (error) {
       next(error);
@@ -122,7 +174,9 @@ export class NotificationController {
 
       res.status(200).json({
         success: true,
-        count,
+        data: {
+          count,
+        },
       });
     } catch (error) {
       next(error);

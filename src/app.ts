@@ -12,6 +12,10 @@ import { createUsersRoutes } from './api/routes/users.routes';
 import { createNotificationRoutes } from './api/routes/notification.routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './infrastructure/config/swagger';
+import {
+  NotificationNotFoundError,
+  NotificationOwnershipError,
+} from './application/services/notification.service';
 
 const createApp = (env: Env, notificationService: NotificationService): Express => {
   const logger = createLogger(env);
@@ -74,8 +78,25 @@ const createApp = (env: Env, notificationService: NotificationService): Express 
       method: _req.method,
     });
 
+    if (err instanceof NotificationNotFoundError) {
+      res.status(404).json({
+        success: false,
+        error: err.message,
+      });
+      return;
+    }
+
+    if (err instanceof NotificationOwnershipError) {
+      res.status(403).json({
+        success: false,
+        error: err.message,
+      });
+      return;
+    }
+
     const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
     res.status(statusCode).json({
+      success: false,
       error: 'Internal Server Error',
       message: env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message,
     });

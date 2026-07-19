@@ -162,5 +162,9 @@ export const createNotificationRoutes = (
     void notificationController.markAsRead(req as AuthenticatedRequest, res, next);
   });
 
+  router.patch('/read-all', authenticate(authService, logger), (req, res, next) => {
+    void notificationController.markAllAsRead(req as AuthenticatedRequest, res, next);
+  });
+
   return router;
 };

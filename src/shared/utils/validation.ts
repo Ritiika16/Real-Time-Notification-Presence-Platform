@@ -37,7 +37,23 @@ export const markAsReadSchema = z.object({
   notificationId: z.string().uuid('Invalid notification ID'),
 });
 
+export const paginationSchema = z.object({
+  page: z
+    .string()
+    .or(z.number())
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().min(1, 'Page must be at least 1'))
+    .default('1'),
+  limit: z
+    .string()
+    .or(z.number())
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .pipe(z.number().min(1, 'Limit must be at least 1').max(100, 'Limit must not exceed 100'))
+    .default('20'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateNotificationInput = z.infer<typeof createNotificationSchema>;
 export type MarkAsReadInput = z.infer<typeof markAsReadSchema>;
+export type PaginationInput = z.infer<typeof paginationSchema>;
